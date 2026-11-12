@@ -59,6 +59,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
     private var incognito = false    // this field: password / no-learning flag / incognito switch
     private var password = false
     private var noSuggestions = false
+    private var vaultChip = false
+    private var vaultExpected = false
+    private var vaultTarget = ""
+    private var inlineBar: android.widget.LinearLayout? = null
     private var best = ""            // what space inserts when autoCorrect is on
     private var bestFor = ""         // the typed word [best] was computed for; space checks it still matches
     private var autoCorrect = false
@@ -128,32 +132,70 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
         }
     }
 
+    /** Logins from the autofill service appear here. The system draws them, so this keyboard never sees their contents. */
+    @androidx.annotation.RequiresApi(30)
+    override fun onCreateInlineSuggestionsRequest(uiExtras: android.os.Bundle): android.view.inputmethod.InlineSuggestionsRequest {
+        val d = resources.displayMetrics.density
+        val style = androidx.autofill.inline.UiVersions.newStylesBuilder()
+            .addStyle(androidx.autofill.inline.v1.InlineSuggestionUi.newStyleBuilder().build()).build()
+        val spec = android.widget.inline.InlinePresentationSpec.Builder(
+            android.util.Size((100 * d).toInt(), (40 * d).toInt()), android.util.Size((260 * d).toInt(), (40 * d).toInt()),
+        ).setStyle(style).build()
+        return android.view.inputmethod.InlineSuggestionsRequest.Builder(listOf(spec)).setMaxSuggestionCount(5).build()
+    }
+
+    @androidx.annotation.RequiresApi(30)
+    override fun onInlineSuggestionsResponse(response: android.view.inputmethod.InlineSuggestionsResponse): Boolean {
+        val bar = inlineBar ?: return false
+        bar.removeAllViews()
+        val d = resources.displayMetrics.density
+        val size = android.util.Size(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, (40 * d).toInt())
+        for (s in response.inlineSuggestions) s.inflate(this, size, mainExecutor) { v -> if (v != null) bar.addView(v) }
+        return true
+    }
+
     override fun onCreateInputView(): View {
         keys = KeyboardView(this).also { it.listener = this }
         strip = SuggestionStrip(this).also { it.listener = this }
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFF000000.toInt())
+            if (Build.VERSION.SDK_INT >= 30) {
+                val bar = android.widget.LinearLayout(context).apply { orientation = android.widget.LinearLayout.HORIZONTAL }
+                inlineBar = bar
+                addView(android.widget.HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false; addView(bar) })
+            }
             addView(strip)
             addView(keys)
             // Edge-to-edge (Android 15+): keep the keys above the gesture bar / nav buttons.
             if (Build.VERSION.SDK_INT >= 30) setOnApplyWindowInsetsListener { v, insets ->
-                v.setPadding(0, 0, 0, insets.getInsets(android.view.WindowInsets.Type.navigationBars()).bottom)
+                // Some skins report 0 first and the real size on a later pass, or only as a gesture inset: take the largest.
+                v.setPadding(0, 0, 0, maxOf(
+                    insets.getInsets(android.view.WindowInsets.Type.navigationBars()).bottom,
+                    insets.getInsets(android.view.WindowInsets.Type.systemGestures()).bottom))
                 insets
             }
         }
         return root
     }
 
+    // Not in onStartInputView: coming back from the picker, the keys may stay hidden while the field already has focus.
+    override fun onStartInput(attribute: EditorInfo, restarting: Boolean) {
+        super.onStartInput(attribute, restarting)
+        takeVaultValue(attribute)
+    }
+
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         prefs = Prefs.read(this)
         applyLook()
+        root.requestApplyInsets()
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val variation = info.inputType and InputType.TYPE_MASK_VARIATION
         password = cls == InputType.TYPE_CLASS_TEXT && variation in PASSWORD_VARIATIONS ||
             cls == InputType.TYPE_CLASS_NUMBER && variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
-        incognito = password || prefs.incognito || info.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
+        // Our own screens hold the vault's names and notes, so nothing typed there is ever learned.
+        incognito = password || prefs.incognito || info.packageName == packageName || info.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
         // Screen recorders and screenshots see a black keyboard while a password is typed.
         window?.window?.let {
             if (password && prefs.secureKeyboard) it.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -166,7 +208,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
             cls == InputType.TYPE_CLASS_TEXT && (variation == InputType.TYPE_TEXT_VARIATION_URI ||
                 variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS ||
                 variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
-        strip.visibility = if (noSuggestions) View.GONE else View.VISIBLE
+        vaultChip = prefs.vaultChip && (password || cls == InputType.TYPE_CLASS_TEXT && (variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS ||
+            variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS))
+        vaultTarget = info.packageName.orEmpty()
+        strip.visibility = if (noSuggestions && !vaultChip) View.GONE else View.VISIBLE
+        if (vaultChip) strip.show(getString(R.string.vault_chip), emptyList(), false)
         // A restart is the same field redoing its setup (Compose does it on cut); an open panel stays.
         if (!restarting) {
             hideClipPanel()
@@ -191,6 +237,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
     }
 
     override fun onFinishInput() {
+        inlineBar?.removeAllViews()
         super.onFinishInput()
         worker.post { if (::userDict.isInitialized) saveDict() }
     }
@@ -270,7 +317,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
     }
 
     override fun onSwipeSpace(dir: Int) {
-        if (layout?.id in Layouts.ALL) nextLanguage(dir)
+        if (layout?.id in Layouts.ALL || layout?.id?.startsWith("symbols") == true) nextLanguage(dir)
     }
 
     override fun onCursor(dir: Int) {
@@ -347,7 +394,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
         val list = Layouts.enabled(prefs.languages)
         lang = list[(list.indexOf(lang).coerceAtLeast(0) + dir + list.size) % list.size]
         getSharedPreferences(Prefs.FILE, MODE_PRIVATE).edit().putString("lang", lang).apply()
-        applyLayout(lang)
+        // Swiping on the symbols page keeps the symbols page; only the language changes.
+        applyLayout(if (layout?.id?.startsWith("symbols") == true) (if (lang == "ar") "symbols-ar" else "symbols") else lang)
         updateShift()
         requestSuggestions()
     }
@@ -372,8 +420,44 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
 
     // ---- suggestions ----
 
+    /** Password text goes only into password fields, directly, so the engine, the learner and the undo state never see it. */
+    private fun takeVaultValue(info: EditorInfo) {
+        if (!vaultExpected) return
+        val pkg = info.packageName ?: return
+        if (pkg == packageName) return // still in the picker's own search box
+        vaultExpected = false
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val variation = info.inputType and InputType.TYPE_MASK_VARIATION
+        val inPasswordField = cls == InputType.TYPE_CLASS_TEXT && variation in PASSWORD_VARIATIONS ||
+            cls == InputType.TYPE_CLASS_NUMBER && variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        val conn = object : android.content.ServiceConnection {
+            override fun onServiceConnected(n: android.content.ComponentName, binder: android.os.IBinder) {
+                val self = this
+                val reply = android.os.Messenger(object : Handler(Looper.getMainLooper()) {
+                    override fun handleMessage(m: android.os.Message) {
+                        val text = m.data?.getString("text")
+                        if (text != null && (m.what != dev.altayeb.hudhud.vault.FillActivity.BRIDGE_PASSWORD || inPasswordField)) currentInputConnection?.commitText(text, 1)
+                        runCatching { unbindService(self) }
+                    }
+                })
+                val ask = android.os.Message.obtain().apply { replyTo = reply; data = android.os.Bundle().apply { putString(dev.altayeb.hudhud.vault.FillActivity.PKG, pkg) } }
+                runCatching { android.os.Messenger(binder).send(ask) }.onFailure { runCatching { unbindService(self) } }
+            }
+            override fun onServiceDisconnected(n: android.content.ComponentName) {}
+        }
+        bindService(Intent(this, dev.altayeb.hudhud.vault.VaultBridgeService::class.java), conn, BIND_AUTO_CREATE)
+    }
+
     override fun onPick(word: String) {
         val ic = currentInputConnection ?: return
+        if (vaultChip && word == getString(R.string.vault_chip)) {
+            vaultExpected = true
+            startActivity(Intent(this, dev.altayeb.hudhud.vault.FillActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
+                .putExtra(dev.altayeb.hudhud.vault.FillActivity.KEYBOARD, true)
+                .putExtra(dev.altayeb.hudhud.vault.FillActivity.PKG, vaultTarget))
+            return
+        }
         lastGlide = ""
         if (clipChip.isNotEmpty() && word == clipChip) {
             ic.commitText(clipChipText, 1)
@@ -468,8 +552,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
         if (!prefs.clipboard || incognito) return
         val clip = clipboard.primaryClip ?: return
         if (clip.itemCount == 0) return
-        val sensitive = Build.VERSION.SDK_INT >= 33 &&
-            clip.description.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true
+        val sensitive = clip.description.extras?.getBoolean("android.content.extra.IS_SENSITIVE") == true
         val item = clip.getItemAt(0)
         if (item.uri != null && clip.description.hasMimeType("image/*")) {
             clips.add(getString(R.string.clip_image), sensitive, item.uri.toString())
@@ -588,11 +671,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
 
     // ---- look ----
 
-    private var theme = KeyTheme.CLASSIC
+    private var theme = KeyTheme.DEFAULT
 
     /** Theme colours + animation switch to every surface. Never touches sizes. */
     private fun applyLook() {
-        theme = KeyTheme.of(this, prefs.theme, prefs.accent)
+        theme = KeyTheme.of(this, prefs.base, prefs.accent)
         keys.setTheme(theme)
         val motion = Motion.enabled(prefs.animations)
         keys.animations = motion
@@ -671,7 +754,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
         if (!searching) return
         searching = false
         searchBar?.let { root.removeView(it) }
-        strip.visibility = if (noSuggestions) View.GONE else View.VISIBLE
+        strip.visibility = if (noSuggestions && !vaultChip) View.GONE else View.VISIBLE
         keys.swipeEdit = prefs.swipeEdit
         applyLayout(layout?.id ?: lang)
     }
@@ -710,7 +793,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener, SuggestionS
     private fun applyLayout(id: String) {
         val l = Layouts.get(id, prefs.numberRow)
         layout = l
-        val name = Layouts.ALL[l.id].orEmpty()
+        val name = (Layouts.ALL[l.id] ?: if (l.id.startsWith("symbols")) Layouts.ALL[lang] else null).orEmpty()
         keys.setLayout(l, prefs.keyHeight, prefs.hints, prefs.vibrate, name)
         keys.glideEnabled = prefs.glide && !noSuggestions && !searching && l.id in Layouts.ALL
         if (l.id in Layouts.ALL) worker.post {

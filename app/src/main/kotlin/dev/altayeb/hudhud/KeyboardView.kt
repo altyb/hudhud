@@ -134,6 +134,7 @@ class KeyboardView(context: Context) : View(context) {
     private var popupSel = 0
     private val popupRect = RectF()
     private var popupCell = 0f
+    private var popupUnit = 0f   // normal cell; a popup with many choices shrinks its cell to fit the screen
 
     /** Off = no motion at all (setting "Animations"). */
     var animations = true
@@ -279,6 +280,7 @@ class KeyboardView(context: Context) : View(context) {
             val gaps = (rowStart[r + 1] - rowStart[r] - 1) * hGap
             if (units > 0f) unit = minOf(unit, (avail - gap - gaps) / units)
         }
+        popupUnit = unit
         popupCell = unit
         keyUnit = unit + hGap
 
@@ -503,6 +505,7 @@ class KeyboardView(context: Context) : View(context) {
     /** Popup row above key [i], centred on it and kept inside the view. */
     private fun openPopup(i: Int) {
         val n = popups[i].size
+        popupCell = minOf(popupUnit, (width - 2 * sidePad) / n)
         val w = n * popupCell
         val kx = (rects[i * 4] + rects[i * 4 + 2]) / 2f
         val left = (kx - popupCell / 2f).coerceIn(sidePad, maxOf(sidePad, width - sidePad - w))

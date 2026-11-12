@@ -8,7 +8,7 @@ import android.os.Build
 data class KeyTheme(
     val bg: Int,          // behind the keys
     val key: Int,
-    val keyEdge: Int,     // darker bottom strip = 3D key
+    val keyEdge: Int,     // unused while [edge] is false
     val pressed: Int,
     val label: Int,
     val accent: Int,      // icons, special labels, shift on, selection
@@ -19,82 +19,51 @@ data class KeyTheme(
     val textDim: Int,
     val special: Int = key,     // shift / delete / enter / 123 / emoji key colour
     val specialLabel: Int = accent,
-    val cornerDp: Float = 5f,   // key corner radius
-    val edge: Boolean = true,   // darker bottom strip
-    val pressScale: Float = 1f, // < 1 = key shrinks while held and springs back (expressive)
+    val cornerDp: Float = 6f,   // key corner radius: near-rectangular
+    val edge: Boolean = false,  // darker bottom strip
+    val pressScale: Float = 0.9f, // < 1 = key shrinks while held and springs back
 ) {
+    /** A surface colour set. The accent is chosen separately, so any base goes with any accent. */
+    class Base(val bg: Int, val key: Int, val special: Int, val pressed: Int, val panel: Int, val card: Int,
+               val label: Int = 0xFFE6E0E9.toInt(), val hint: Int = 0xFFB4B2B8.toInt())
+
     companion object {
-        /** The default: Ginger-style grey keys on black, cyan accents. */
-        val CLASSIC = KeyTheme(
-            bg = Color.BLACK, key = 0xFF474747.toInt(), keyEdge = 0xFF2E2E2E.toInt(),
-            pressed = 0xFF6B6B6B.toInt(), label = Color.WHITE, accent = 0xFF71E2FB.toInt(),
-            onAccent = Color.BLACK, hint = 0xFF9E9E9E.toInt(), panel = 0xFF1B1B1C.toInt(),
-            card = 0xFF2C2D2F.toInt(), textDim = 0xFF9E9E9E.toInt(),
+        private fun b(bg: Long, key: Long, special: Long, pressed: Long, panel: Long, card: Long) =
+            Base(bg.toInt(), key.toInt(), special.toInt(), pressed.toInt(), panel.toInt(), card.toInt())
+
+        /** id → surfaces, in the order the settings show them. */
+        val BASES = linkedMapOf(
+            "charcoal" to b(0xFF0C0C0D, 0xFF2A2A2D, 0xFF39393D, 0xFF414146, 0xFF161618, 0xFF212124),
+            "black" to Base(0xFF000000.toInt(), 0xFF1A1A1A.toInt(), 0xFF262626.toInt(), 0xFF3A3A3A.toInt(), 0xFF0A0A0A.toInt(), 0xFF141414.toInt(), 0xFFF2F2F2.toInt(), 0xFF9A9A9A.toInt()),
+            "graphite" to b(0xFF1C1C1E, 0xFF3A3A3C, 0xFF48484A, 0xFF5A5A5E, 0xFF242426, 0xFF2C2C2E),
+            "slate" to b(0xFF0F1418, 0xFF27323A, 0xFF33414B, 0xFF435561, 0xFF161D23, 0xFF1F2830),
+            "midnight" to b(0xFF0A1022, 0xFF1E2745, 0xFF2A3560, 0xFF3B4A80, 0xFF111832, 0xFF18213F),
+            "forest" to b(0xFF0B140F, 0xFF213427, 0xFF2D4535, 0xFF3F5E49, 0xFF111C15, 0xFF192A1F),
+            "wine" to b(0xFF150A0E, 0xFF3A1F28, 0xFF4E2B38, 0xFF693B4C, 0xFF1E0F15, 0xFF2B1720),
+            "mocha" to b(0xFF14100D, 0xFF372D26, 0xFF4A3D34, 0xFF62524A, 0xFF1D1713, 0xFF2A211B),
+            "teal" to b(0xFF0B1F25, 0xFF1F4350, 0xFF2B5663, 0xFF3A6E7E, 0xFF12292F, 0xFF1A3740),
+            "paper" to Base(0xFFD9D6CB.toInt(), 0xFFFFFFFF.toInt(), 0xFFC4C0B2.toInt(), 0xFFB0AC9E.toInt(), 0xFFEDEADF.toInt(), 0xFFFFFFFF.toInt(), 0xFF1A1A1A.toInt(), 0xFF6B6B66.toInt()),
         )
 
-        /** Light keys on pale grey, same shapes as classic. */
-        val LIGHT = KeyTheme(
-            bg = 0xFFD8DADD.toInt(), key = Color.WHITE, keyEdge = 0xFFB4B7BB.toInt(),
-            pressed = 0xFFBFC2C6.toInt(), label = 0xFF1A1A1A.toInt(), accent = 0xFF00708C.toInt(),
-            onAccent = Color.WHITE, hint = 0xFF6B6E73.toInt(), panel = 0xFFEEEFF1.toInt(),
-            card = Color.WHITE, textDim = 0xFF6B6E73.toInt(), special = 0xFFB9BCC1.toInt(),
+        /** 0 = wallpaper colour on Android 12+ (hoopoe orange before that). */
+        val ACCENTS = listOf(
+            0, 0xFFF2A65A.toInt(), 0xFF71E2FB.toInt(), 0xFF7BD88F.toInt(), 0xFFFF7A90.toInt(), 0xFFC3A6FF.toInt(),
+            0xFFFFD54F.toInt(), 0xFFFF6B5B.toInt(), 0xFF82B1FF.toInt(), 0xFF4DD0C4.toInt(), 0xFFE6E0E9.toInt(),
         )
+        const val ORANGE = 0xFFF2A65A.toInt()
 
-        /** Material 3 baseline dark, used for "material" before Android 12 (no wallpaper colours there). */
-        private val MATERIAL_BASE = KeyTheme(
-            bg = 0xFF141218.toInt(), key = 0xFF36343B.toInt(), keyEdge = 0xFF36343B.toInt(),
-            pressed = 0xFF4A4458.toInt(), label = 0xFFE6E0E9.toInt(), accent = 0xFFD0BCFF.toInt(),
-            onAccent = 0xFF381E72.toInt(), hint = 0xFFCAC4D0.toInt(), panel = 0xFF211F26.toInt(),
-            card = 0xFF2B2930.toInt(), textDim = 0xFFCAC4D0.toInt(),
-            special = 0xFF4A4458.toInt(), specialLabel = 0xFFE8DEF8.toInt(),
-            cornerDp = 16f, edge = false, pressScale = 0.9f,
-        )
+        val DEFAULT = build(BASES.getValue("charcoal"), ORANGE)
 
-        /**
-         * "material" = Material You: rounder keys, tonal special keys, spring press, wallpaper colours on Android 12+.
-         * "dynamic" = classic shapes with wallpaper colours. Anything else = classic.
-         */
-        fun of(context: Context, name: String, accent: Int = 0): KeyTheme {
-            val t = of(context, name)
-            if (accent == 0) return t
-            val lum = Color.luminance(accent)
-            return t.copy(accent = accent, specialLabel = accent, onAccent = if (lum > 0.4f) Color.BLACK else Color.WHITE)
+        fun of(context: Context, base: String, accent: Int): KeyTheme {
+            val a = if (accent != 0) accent
+                else if (Build.VERSION.SDK_INT >= 31) context.getColor(android.R.color.system_accent1_200) else ORANGE
+            return build(BASES[base] ?: BASES.getValue("charcoal"), a)
         }
 
-        private fun of(context: Context, name: String): KeyTheme {
-            if (name == "light") return LIGHT
-            if (name == "material" && Build.VERSION.SDK_INT < 31) return MATERIAL_BASE
-            if ((name != "dynamic" && name != "material") || Build.VERSION.SDK_INT < 31) return CLASSIC
-            fun c(id: Int) = context.getColor(id)
-            if (name == "material") return KeyTheme(
-                bg = c(android.R.color.system_neutral1_900),
-                key = c(android.R.color.system_neutral2_800),
-                keyEdge = c(android.R.color.system_neutral2_800),
-                pressed = c(android.R.color.system_accent2_700),
-                label = c(android.R.color.system_neutral1_50),
-                accent = c(android.R.color.system_accent1_200),
-                onAccent = c(android.R.color.system_accent1_900),
-                hint = c(android.R.color.system_neutral2_300),
-                panel = c(android.R.color.system_neutral1_800),
-                card = c(android.R.color.system_neutral2_800),
-                textDim = c(android.R.color.system_neutral2_300),
-                special = c(android.R.color.system_accent2_700),
-                specialLabel = c(android.R.color.system_accent2_100),
-                cornerDp = 16f, edge = false, pressScale = 0.9f,
-            )
-            return KeyTheme(
-                bg = c(android.R.color.system_neutral1_900),
-                key = c(android.R.color.system_neutral2_700),
-                keyEdge = c(android.R.color.system_neutral2_800),
-                pressed = c(android.R.color.system_neutral2_500),
-                label = c(android.R.color.system_neutral1_50),
-                accent = c(android.R.color.system_accent1_200),
-                onAccent = c(android.R.color.system_accent1_900),
-                hint = c(android.R.color.system_neutral2_300),
-                panel = c(android.R.color.system_neutral1_800),
-                card = c(android.R.color.system_neutral2_800),
-                textDim = c(android.R.color.system_neutral2_300),
-            )
-        }
+        private fun build(s: Base, accent: Int) = KeyTheme(
+            bg = s.bg, key = s.key, keyEdge = s.key, pressed = s.pressed, label = s.label,
+            accent = accent, onAccent = if (Color.luminance(accent) > 0.4f) Color.BLACK else Color.WHITE,
+            hint = s.hint, panel = s.panel, card = s.card, textDim = s.hint, special = s.special, specialLabel = accent,
+        )
     }
 }

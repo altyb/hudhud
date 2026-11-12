@@ -11,8 +11,8 @@ android {
         applicationId = "dev.altayeb.hudhud"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.3.1"
+        versionCode = 9
+        versionName = "1.4.0"
     }
     // Release key lives outside the repo; set HUDHUD_KS / HUDHUD_KS_PASS / HUDHUD_KEY_ALIAS to sign.
     signingConfigs {
@@ -44,7 +44,11 @@ kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarg
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.06.01"))
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended") // R8 keeps only the icons used
     implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.81")
+    implementation("androidx.autofill:autofill:1.1.0")
+    implementation("androidx.credentials:credentials:1.5.0")
     testImplementation("junit:junit:4.13.2")
 }
 

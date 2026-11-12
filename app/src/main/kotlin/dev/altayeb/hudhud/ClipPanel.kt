@@ -28,7 +28,7 @@ class ClipPanel(context: Context, private val panelHeight: Int) : LinearLayout(c
     }
 
     var listener: Listener? = null
-    var theme = KeyTheme.CLASSIC
+    var theme = KeyTheme.DEFAULT
     var animations = true
     private val d = resources.displayMetrics.density
 

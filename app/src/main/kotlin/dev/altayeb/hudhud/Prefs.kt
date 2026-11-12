@@ -26,10 +26,11 @@ data class Prefs(
     val incognito: Boolean = false,       // no learning, no clipboard history, anywhere
     val clearClipsOnLock: Boolean = true, // wipe clipboard history when the screen turns off
     val secureKeyboard: Boolean = true,   // block screenshots/recording of the keys in password fields
+    val vaultChip: Boolean = true,        // Passwords button above the keys in login fields
     // Look (colours and motion only, never sizes)
-    val theme: String = "classic",        // "classic" (default) or "dynamic" (wallpaper colours, Android 12+)
+    val base: String = "charcoal",        // a KeyTheme.BASES id: the surface colours
     val animations: Boolean = true,
-    val accent: Int = 0,                  // 0 = the theme's own accent colour
+    val accent: Int = KeyTheme.ORANGE,    // 0 = wallpaper colour (Android 12+)
 ) {
     companion object {
         const val FILE = "prefs"
@@ -59,7 +60,8 @@ data class Prefs(
                 incognito = p.getBoolean("incognito", d.incognito),
                 clearClipsOnLock = p.getBoolean("clearClipsOnLock", d.clearClipsOnLock),
                 secureKeyboard = p.getBoolean("secureKeyboard", d.secureKeyboard),
-                theme = p.getString("theme", d.theme) ?: d.theme,
+                vaultChip = p.getBoolean("vaultChip", d.vaultChip),
+                base = p.getString("base", d.base) ?: d.base,
                 animations = p.getBoolean("animations", d.animations),
                 accent = p.getInt("accent", d.accent),
             )

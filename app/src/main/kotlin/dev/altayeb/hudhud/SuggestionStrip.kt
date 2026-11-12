@@ -35,10 +35,10 @@ class SuggestionStrip(context: Context) : View(context) {
     private val bestPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = CYAN; textSize = 16 * density; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD
     }
+    private val gear = android.graphics.Path()
     private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = CYAN; style = Paint.Style.STROKE; strokeWidth = 2 * density; strokeJoin = Paint.Join.ROUND
     }
-    private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = CYAN }
     private val rect = android.graphics.RectF()
     private val linePaint = Paint().apply { color = 0xFF3A3C40.toInt(); strokeWidth = density }
 
@@ -52,7 +52,6 @@ class SuggestionStrip(context: Context) : View(context) {
         wordPaint.color = t.label
         bestPaint.color = t.accent
         iconPaint.color = t.accent
-        dotPaint.color = t.accent
         linePaint.color = t.card
         invalidate()
     }
@@ -81,7 +80,7 @@ class SuggestionStrip(context: Context) : View(context) {
         val slotW = (w - 2 * iconWidth) / 3
         val baseline = h / 2 - (wordPaint.descent() + wordPaint.ascent()) / 2
         drawClipboardIcon(canvas, iconWidth / 2, h / 2)
-        for (d in -1..1) canvas.drawCircle(w - iconWidth / 2 + d * 6 * density, h / 2, 2 * density, dotPaint)
+        drawGearIcon(canvas, w - iconWidth / 2, h / 2)
         for (i in 0..2) {
             val text = slots[i]
             if (text.isEmpty()) continue
@@ -92,6 +91,25 @@ class SuggestionStrip(context: Context) : View(context) {
         canvas.drawLine(iconWidth + slotW, h * 0.25f, iconWidth + slotW, h * 0.75f, linePaint)
         canvas.drawLine(iconWidth + 2 * slotW, h * 0.25f, iconWidth + 2 * slotW, h * 0.75f, linePaint)
         canvas.drawLine(0f, h - density, w, h - density, linePaint)
+    }
+
+    /** Settings gear: one closed outline with eight trapezoid teeth and a hole, ~18dp. */
+    private fun drawGearIcon(canvas: Canvas, cx: Float, cy: Float) {
+        val u = density
+        val outer = 9 * u; val root = 6.5f * u
+        gear.rewind()
+        for (i in 0 until 8) {
+            val mid = i * 45.0
+            // root start, tooth base, tooth top, tooth top, tooth base, root end (degrees around the tooth centre)
+            for ((da, r) in listOf(-22.5 to root, -15.0 to root, -10.0 to outer, 10.0 to outer, 15.0 to root)) {
+                val a = Math.toRadians(mid + da)
+                val x = cx + Math.cos(a).toFloat() * r; val y = cy + Math.sin(a).toFloat() * r
+                if (gear.isEmpty) gear.moveTo(x, y) else gear.lineTo(x, y)
+            }
+        }
+        gear.close()
+        canvas.drawPath(gear, iconPaint)
+        canvas.drawCircle(cx, cy, 2.8f * u, iconPaint)
     }
 
     /** Clipboard outline with the clip on top, ~18dp tall. */

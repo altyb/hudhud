@@ -25,9 +25,9 @@ Sister app: [Shoebill](https://github.com/altyb/shoebill), a private video playe
 
 ## Install
 
-1. Download `hudhud-1.3.1.apk` from [Releases](https://github.com/altyb/hudhud/releases/latest). One file for every Android phone, Android 8.0 or newer.
+1. Download `hudhud-1.4.0.apk` from [Releases](https://github.com/altyb/hudhud/releases/latest). One file for every Android phone, Android 8.0 or newer.
 2. Open it and allow installing from your browser or file manager if Android asks.
-3. Open **Hudhud Keyboard**, tap **Enable keyboard**, switch it on, then **Choose keyboard**.
+3. Open **Hudhud**, tap **Enable keyboard**, switch it on, then **Choose keyboard**.
 
 Check the file before installing if you like: the SHA-256 is listed on the release page.
 
@@ -59,7 +59,7 @@ So I wrote my own. The rules were: it has to stay light on any Android phone, no
 - **The classic layout.** Tall keys, symbols and digits on the keys, long-press popups with accents.
 - **Clipboard.** Recent copies, including images where the app you type in accepts them, pin the ones you want to keep, and a paste chip in the suggestion row for what you just copied.
 - **Emoji panel** with recents and search by English or Arabic name.
-- **Two looks.** Classic (the default, above) or Material You: rounder keys in your wallpaper colours with a springy press. Key sizes and layout are the same in both.
+- **Your colours.** Ten dark and light surfaces (charcoal, black, slate, midnight and more) with eleven accents, any combination, plus your wallpaper colour on Android 12+. Square keys, a springy press, and a live preview in Settings.
 - **Both question marks.** `?` and `؟` are a long-press away in every language.
 - **Calm motion.** Short fades and slides with one shared timing, never on the key press itself. Off with one switch, and off automatically when Android's "Remove animations" is on.
 

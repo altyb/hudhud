@@ -106,7 +106,17 @@ object Layouts {
     private fun digitRow(hints: List<String> = emptyList()): List<Key> =
         "1234567890".mapIndexed { i, c -> Key(c.toString(), c.code, hints.getOrElse(i) { "" }) }
 
-    private fun chars(s: String): List<Key> = s.split(" ").map { Key(it, it[0].code, alts = otherQuestionMark(it)) }
+    /** Extra symbols on long-press of a symbol key; the first one also shows as the small hint. */
+    private val SYM = mapOf(
+        "@" to "©", "#" to "~ ^", "$" to "€ £ ¥", "&" to "§", "-" to "– —", "+" to "= ± ×",
+        "(" to "[ { <", ")" to "] } >", "/" to "\\ |", "*" to "•", "\"" to "“ ”", "'" to "‘ ’",
+        "!" to "¡", "1" to "½", "0" to "°",
+    ).mapValues { it.value.split(" ") }
+
+    private fun chars(s: String): List<Key> = s.split(" ").map {
+        val a = SYM[it].orEmpty()
+        Key(it, it[0].code, hint = a.firstOrNull().orEmpty(), alts = a.drop(1) + otherQuestionMark(it))
+    }
 
     /** Long-press on either question mark also offers the other shape, whatever the language. */
     private fun otherQuestionMark(mark: String) = when (mark) {
@@ -155,7 +165,7 @@ object Layouts {
         val rows = listOf(
             digitRow(),
             chars("@ # \$ _ & - + ( ) /"),
-            chars(if (arabic) "* \" ' : ؛ ! ؟ ،" else "* \" ' : ; ! ? ,") + Key("⌫", Codes.DELETE, width = 1.5f),
+            chars(if (arabic) "* % \" ' : ؛ ! ؟" else "* % \" ' : ; ! ?") + Key("⌫", Codes.DELETE, width = 1.5f),
             listOf(
                 Key("ABC", Codes.LETTERS, width = 1.5f),
                 Key("☺", Codes.EMOJI),
@@ -177,6 +187,7 @@ object Layouts {
                 Key("ABC", Codes.LETTERS),
                 Key("0", '0'.code),
                 Key(".", '.'.code),
+                Key("%", '%'.code),
                 Key("↵", Codes.ENTER),
             ),
         )

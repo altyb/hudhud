@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.4.0 (2026-11-12)
+New logo and icon. One theme now, Material You style with square keys: ten surfaces and eleven accents, any combination, with a live preview. Settings is a short list with a guide on each page. A language switch on the symbols page (swipe the space bar), more symbols on long-press, and a % key. The keyboard keeps clear of the gesture bar. The three dots are a settings gear.
+
 ## 1.3.1 (2026-10-31)
 Offensive words and slurs are no longer suggested, in any language. You can still type them, and words you have taught the keyboard keep working. Autocorrect may change one the first time, as it does with any word the keyboard does not know.
 

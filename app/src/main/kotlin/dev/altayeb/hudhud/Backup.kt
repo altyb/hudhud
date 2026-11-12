@@ -21,10 +21,10 @@ object Backup {
 
     private val BOOLS = setOf(
         "suggestions", "predictNext", "autocorrect", "learn", "clipboard", "autoCaps", "doubleSpacePeriod", "vibrate",
-        "sound", "glide", "swipeEdit", "split", "numberRow", "hints", "incognito", "clearClipsOnLock", "secureKeyboard", "animations",
+        "sound", "glide", "swipeEdit", "split", "numberRow", "hints", "incognito", "clearClipsOnLock", "secureKeyboard", "vaultChip", "animations",
     )
     private val INTS = setOf("keyHeight", "oneHanded", "accent", "emojiTone")
-    private val STRINGS = setOf("theme", "lang", "languages")
+    private val STRINGS = setOf("base", "lang", "languages")
 
     class Data(val prefs: Map<String, String>, val dict: File?)
 
