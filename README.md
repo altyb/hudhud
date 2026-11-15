@@ -23,6 +23,10 @@
 
 Sister app: [Shoebill](https://github.com/altyb/shoebill), a private video player.
 
+## Screenshots
+
+<p align="center"><img src="https://raw.githubusercontent.com/altyb/fdroid/main/repo/dev.altayeb.hudhud/en-US/phoneScreenshots/1.png" width="23%" alt="hudhud screenshot 1"> <img src="https://raw.githubusercontent.com/altyb/fdroid/main/repo/dev.altayeb.hudhud/en-US/phoneScreenshots/2.png" width="23%" alt="hudhud screenshot 2"> <img src="https://raw.githubusercontent.com/altyb/fdroid/main/repo/dev.altayeb.hudhud/en-US/phoneScreenshots/3.png" width="23%" alt="hudhud screenshot 3"> <img src="https://raw.githubusercontent.com/altyb/fdroid/main/repo/dev.altayeb.hudhud/en-US/phoneScreenshots/4.png" width="23%" alt="hudhud screenshot 4"></p>
+
 ## Install
 
 1. Download `hudhud-1.4.0.apk` from [Releases](https://github.com/altyb/hudhud/releases/latest). One file for every Android phone, Android 8.0 or newer.
@@ -89,10 +93,6 @@ Measured on a Xiaomi 17 Ultra while typing: 0.3% janky frames, median frame 5 ms
 ```
 
 Needs JDK 17+ and the Android SDK (compileSdk 36, minSdk 26).
-
-## How it was made
-
-Much of this code was written with an AI coding assistant (Claude) under my direction. If something looks wrong, please open an issue.
 
 ## Credits
 
